@@ -47,7 +47,7 @@
 
 ![](Images/Binding_Bind.gif)
 
-我们布局之类的干扰，只看这三个文本框的话，那GacUI就是这样完成这个任务的：
+我们排除布局之类的干扰，只看这三个文本框的话，那GacUI就是这样完成这个任务的：
 
 ```XML
 <SinglelineTextBox ref.Name="textBoxA" Text="1"/>
