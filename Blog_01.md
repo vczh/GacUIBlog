@@ -45,7 +45,7 @@
 
 举个[简单的例子](https://github.com/vczh-libraries/Release/blob/master/Tutorial/GacUI_Xml/Binding_Bind/UI/Resource.xml)。一个算加法的程序，需要三个文本框。前两个文本框的内容变了，第三个文本框马上显示两个数字的和：
 
-![](Images/Binding_Bind.gif)
+![](Images/01-01-Binding.gif)
 
 我们排除布局之类的干扰，只看这三个文本框的话，那GacUI就是这样完成这个任务的：
 
