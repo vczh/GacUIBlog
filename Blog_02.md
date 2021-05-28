@@ -16,7 +16,56 @@ UI库跨平台的方法无非就是每个平台写一次。而如何把更多的
 
 然后开始创建控件，每一个控件的皮肤也被抽象成了一个接口。譬如说按钮的皮肤，基本上就是一个被动接受信息的接口，他会不断地接受从控件来的命令，譬如更改字体啊，更改文字啊，更改颜色，更改位置啊啊。其次按钮放到不同的容器里面的时候，皮肤接口也会接到通知，这个信息用来把控件告知的位置换算成以窗口的一个角作为原点的坐标系。但是皮肤自己要绘制，其实还是要知道UI库用的是OpenGL。于是窗口的抽象接口还是留了一个后门，会暴露自己的OpenGL相关的信息。因此这种抽象是不够彻底的，说到底只是一次隔离，控件不需要关心渲染器，但是皮肤不仅要关心渲染器还要关心控件。
 
+GacUI现在的`INativeController`的第一个版本就是从那个时候开始创建的。当时的代码长这样：
+
+```C++
+class INativeController : public Interface
+{
+public:
+    virtual INativeWindow* CreateNativeWindow() = 0;
+    virtual void           DestroyNativeWindow(INativeWindow* window) = 0;
+    virtual INativeWindow* GetMainWindow() = 0;
+    virtual void           Run(INativeWindow* window) = 0;
+
+    virtual bool           InstallListener(INativeControllerListener* listener) = 0;
+    virtual bool           UninstallListener(INativeControllerListener* listener) = 0;
+    
+    virtual int            GetScreenCount() = 0;
+    virtual INativeScreen* GetScreen(int index) = 0;
+    virtual INativeScreen* GetScreen(INativeWindow* window) = 0;
+};
+```
+
+再看看今天的`INativeController`
+
+```C++
+class INativeController : public virtual IDescriptable, public Description<INativeController>
+{
+public:
+    virtual INativeCallbackService*  CallbackService()=0;
+    virtual INativeResourceService*  ResourceService()=0;
+    virtual INativeAsyncService*     AsyncService()=0;
+    virtual INativeClipboardService* ClipboardService()=0;
+    virtual INativeImageService*     ImageService()=0;
+    virtual INativeScreenService*    ScreenService()=0;
+    virtual INativeWindowService*    WindowService()=0;
+    virtual INativeInputService*     InputService()=0;
+    virtual INativeDialogService*    DialogService()=0;
+    virtual WString                  GetExecutablePath()=0;
+};
+```
+
+功能多到塞不下了，只能切割成不同的service了。不过这也为2.0打了一点基础，像UWP、WASM和命令行这样的平台，GacUI基本上只能用单独的一个窗口来host里面的假窗口。UWP不同的窗口是基于不同的线程的，一下子想要支持这个觉得有点难先跳过。而命令行和WASM都没办法创建多窗口。因此可以预见到时候可能会有一些service的实现本身就可以跨平台，这样独立出来也好。
+
 后来就有了上一篇博客提到的那个模板实验，但是那个时候渲染器已经换成了GDI。OpenGL在Windows上搞文字处理还是很蛋疼，上古时代唯一简便的方法就是用GDI先生成贴图然后送进显卡里当资源。那我干嘛不直接用GDI呢？反正Windows 7的GDI也有硬件加速了。我那个时候还做了另一个实验，用GDI实现GDI+的各种骚效果，也成功了。于是项目就换成了GDI。
+
+当时的代码有些已经不见了，只剩下了cppblog上的几幅图。看着这些图还可以感受到时代的烙印。当年开发模板实验的时候用的还是Windows Vista，于是审美也被默默地影响了，画出来变成了这样：
+
+![](Images/02-02-Template.png)
+
+那个时候还写了一个测试程序，使用GDI模拟了GDI+的可以使用各种半透明Brush来填充边框和内容的设定。仔细的话可以看得出来，里面穷举了各种Pen和Brush的组合，甚至连渲染文字的时候也有用。
+
+![](Images/02-03-GdiPlus.png)
 
 不过当年自己设计的那套XML创建模板+简单数据绑定的系统还是过于粗糙了，于是等到真的拿来做GUI的时候，我还是选择了用代码创建。难看是难看了点，但是反正C++有各种技巧可以让他变得“好看”。又过了一段时间，这个项目也流产了，主要原因就是仅仅把渲染器的代码隔离了，而没有隔离渲染器的知识（也就是说我还得知道底下用的是GDI否则写不出皮肤的这件事）。
 
