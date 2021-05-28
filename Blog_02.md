@@ -188,8 +188,8 @@ void GuiMain()
 
 在这个例子里面，`GuiMain`创建了`MyWindow`，它是`GuiWindow`的子类。于是在初始化函数里面，`GetCurrentController()->WindowService()->CreateNativeWindow`就被调用，于是：
 
-- `SetupWindowsDirect2DRenderer`注册进去的Windows版本的`INativeController`就开始发力了，创建出了一个`HWND`。
-- `SetupWindowsDirect2DRenderer`注册进去的`Direct2DWindowsNativeControllerListener`就会被通知，创建出了一个`ID2D1HwndRenderTarget`。
+- `WinMainDirect2D`注册进去的Windows版本的`INativeController`就开始发力了，创建出了一个`HWND`。
+- `WinMainDirect2D`注册进去的`Direct2DWindowsNativeControllerListener`就会被通知，创建出了一个`ID2D1HwndRenderTarget`。
 - `RendererMainDirect2D`注册进去的每一个图元渲染器工厂示例也开始发力了。一个简单的窗口上可能会有几十个图元，于是几十个图元渲染器就被挂在了布局图元树上。
 - 然后`GetApplication()->Run(&window)`被执行，窗口第一次被渲染，这几十个图元渲染器纷纷调用`GetWindowsDirect2DObjectProvider`之后，通过它提供的函数获取到了相应的`ID2D1HwndRenderTarget`对象，开始画图。
 
@@ -197,4 +197,6 @@ void GuiMain()
 
 ## 尾声
 
+UI对于系统的功能需求是稳定的，GacUI在把GDI和Direct2D渲染器写好之后，`INativeController`这部分基本就没怎么修改了。在2014年，GacUI被darkfall同学首先移植到了macOS上，然后就去上班没有更新了。他的反馈是移植很容易，虽然`INativeController`接口很浓厚的Windows的味道，但是总的来说并没有对macOS的工作造成什么障碍。在这之后的6年里，GacUI发生了巨大的变化。到了2020年，roodkcab同学把已经没法编译的`iGac repo`做了一下更新，追赶到了GacUI的最新版本，发现着6年里面GacUI对系统层面的修改微乎其微，几乎所有的进度都是跨平台的。
 
+这一定程度上表明了，GacUI的系统解耦工作是相当成功的。GacUI在设计上把对操作系统的需求隔离并最小化，于是每次一直到一个新的平台上，都不需要花多少努力就可以完成。而且`INativeController`对GacUI剩余的部分是一无所知，所以移植者只需要对目标平台有足够的了解，不需要深入了解GacUI具体是怎么运转的，也不妨碍实现`INativeController`的的工作。当然这个解耦也不完美，譬如GacUI实现菜单的功能需要挂一个全局的鼠标钩子，才能在用户点击桌面或者其他程序的时候把菜单关掉。这一点对Linux平台的移植造成了一些困难，使得`xGac repo`依赖了让一些程序员不开心的东西（逃。以后可能考虑把菜单的实现修改掉，尽可能脱离对全局鼠标钩子的依赖。
