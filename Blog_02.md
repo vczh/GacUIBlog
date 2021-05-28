@@ -150,4 +150,51 @@ public:
 
 ## 平台抽象与渲染器抽象之间的解耦
 
+在上面的讨论中，我们知道系统调用`INativeController`的接口抽象掉了。这个接口是一个单例，熟悉设计模式的同学们都应该很清楚什么是单例。每一个平台都有一套`INativeController`的实现。一个操作系统可以有很多个平台，典型的就是Windows，Win32、UWP、命令行，就是不同的东西。当我们创建一个`GuiWindow`对象，这个对象就会执行`GetCurrentController->WindowService()->CreateNativeWindow()`，向`INativeController`要一个`INativeWindow`。因为创建了一个`INativeWindow`，系统里就出来一个窗口。要是没有窗口你还怎么往上面画东西呢？`GuiWindow`拿到了`INativeWindow`之后，就会把这个对象广播给以它为根节点的布局图元树上的每一个图元(`IGuiGraphicsElement`)。于是现在每一个图元都知道他自己在哪一个`INativeWindow`上了。这是第一步。
+
+一个平台可能有多个渲染器的实现，甚至这个渲染器本身并不做渲染。譬如在我的设想中，UWP平台上的GacUI实现，渲染就是把布局图元树同步到UWP自己的那套东西上面去，并不调用绘图API。`INativeController`本身就会广播时间，不仅仅有全局鼠标钩子啊计时器这样的东西，每一次`INativeWindow`被创建和释放的时候，`INativeController`都会广播消息。需要知道这些消息的对象，可以实现一个`INativeControllerListener`，然后注册进去。渲染器本身也是一个`INativeControllerListener`，每次`INativeWindow`被创建的时候，就会开始为这个窗口做一些初始化。
+
+对于GDI来说，窗口初始化就是要创建一个HBITMAP，每次需要刷新了就往这个HBITMAP上画，最后一次性刷新到窗口上去。对于Direct2D来说，窗口的初始化就是要创建一个render target，做类似的事情。OpenGL则更有趣，因为不同的平台上都有OpenGL，渲染的方法是一样的，但是初始化的方法大相径庭。于是对于OpenGL渲染器，大部分代码都可以共享，而初始化的这部分就每个平台做一次。
+
+于是`INativeWindow`被创建好了之后，对应的渲染设备也被创建好了，这样就可以从一个`INativeWindow`得到渲染设备。这是第二步。
+
+一个GacUI初始化的时候就要确定使用的渲染器。这个渲染器程序启动的时候，会为每一种图元绑定好一个图元渲染器的工厂示例。GacUI目前的实现是用图元的名字绑定的，其实不是太好，以后要改。不过尽管如此，实践表明在这种问题上那字符串做index对性能的影响微乎其微。每一个图元被（在第一不中）通知自己所依附的`INativeWindow`之后，就会去要这个图元渲染器的工厂示例。工厂示例创建了一个图元渲染器，这个图元渲染器当然知道他自己负责的是什么图元，也知道他自己需要在哪个`INativeWindow`上画，自然就知道应该去获得什么渲染设备了。这是第三步。
+
+最后一步就容易了，每当GacUI觉得自己需要刷新了，就会挨个通知这些图元，这些图元就会通知自己的图元渲染器，图元渲染器就是干具体工作的地方了。
+
+于是在这个架构里面，图元根本不需要自己跑在什么渲染器上，开发者只需要在初始化的时候说好要用什么渲染器，那么图元渲染器就会被连接到每一个图元上。图元渲染器的实现当然是每一个渲染器都会提供一份的，所以图元渲染器本身具有“现在开发者想用哪个渲染器”这样的知识，那他当然也就知道向谁要某个`INativeWindow`对应的渲染设备了。至此控件与平台、图元与渲染器之间的解耦就完成了。
+
+### Win32平台下Direct2D渲染器的启动过程
+
+我们可以看Direct2D作为例子。GacUI的开发者想要使用Direct2D渲染器在Win32平台上启动GacUI，那么典型的代码就是这样子：
+
+```C++
+int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int CmdShow)
+{
+    return SetupWindowsDirect2DRenderer();
+}
+
+void GuiMain()
+{
+    MyWindow window;
+    GetApplication()->Run(&window);
+}
+```
+
+- `SetupWindowsDirect2DRenderer`函数当然知道自己既Windows也Direct2D，于是他就调用`WinMainDirect2D`函数。这个函数主要的功能就是创建Win32版本的`INativeController`实现注册到单例里面，把`Direct2DWindowsNativeControllerListener`注册到`INativeController`里面，最后启动`SetWindowsDirect2DObjectProvider`函数以及`RendererMainDirect2D`函数。从此每当一个`INativeWindow`被创建的时候，`Direct2DWindowsNativeControllerListener`就会得到通知，并为每一个窗口创建一个`ID2D1HwndRenderTarget`。从`INativeWindow`到`ID2D1HwndRenderTarget`的知识，就可以通过调用`GetWindowsDirect2DObjectProvider`来获得。
+- `RendererMainDirect2D`函数当然知道自己是Direct2D。在这个函数里面，它为每一个图元都注册了一个Direct2D相关的图元渲染器工厂示例。在每一个图元被创建之后，工厂示例就会创建相应的图元渲染器。这个渲染器理所当然的就知道`GetWindowsDirect2DObjectProvider`这件事。在做完了这些事情之后，`GuiApplicationMain`函数就被调用了。
+- `GuiApplicationMain`已经是平台无关的函数了，它负责统筹GacUI的各项资源，初始化好后调用`GuiMain`。
+- `GuiMain`就是用户实现的函数了。
+
+在这个例子里面，`GuiMain`创建了`MyWindow`，它是`GuiWindow`的子类。于是在初始化函数里面，`GetCurrentController()->WindowService()->CreateNativeWindow`就被调用，于是：
+
+- `SetupWindowsDirect2DRenderer`注册进去的Windows版本的`INativeController`就开始发力了，创建出了一个`HWND`。
+- `SetupWindowsDirect2DRenderer`注册进去的`Direct2DWindowsNativeControllerListener`就会被通知，创建出了一个`ID2D1HwndRenderTarget`。
+- `RendererMainDirect2D`注册进去的每一个图元渲染器工厂示例也开始发力了。一个简单的窗口上可能会有几十个图元，于是几十个图元渲染器就被挂在了布局图元树上。
+- 然后`GetApplication()->Run(&window)`被执行，窗口第一次被渲染，这几十个图元渲染器纷纷调用`GetWindowsDirect2DObjectProvider`之后，通过它提供的函数获取到了相应的`ID2D1HwndRenderTarget`对象，开始画图。
+
+一个GacUI窗口就显示在了用户的面前。
+
 ## 尾声
+
+
