@@ -20,26 +20,35 @@ GacUI XML Resource大约在2013年左右开始成形，但是最终的功能是�
     <att.Columns>
       <CellOption>composeType:Percentage percentage:1.0</CellOption>
       <CellOption>composeType:MinSize</CellOption>
+      <CellOption>composeType:MinSize</CellOption>
     </att.Columns>
 
-    <Cell Site="row:0 column:0 columnSpan:2">
+    <Cell Site="row:0 column:0 columnSpan:3">
       <Label Text="Welcomg to GacUI!"/>
     </Cell>
 
     <Cell Site="row:1 column:1">
       <Button ref.Name="buttonOK" Text="OK">
     </Cell>
+
+    <Cell Site="row:1 column:2">
+      <Button ref.Name="buttonCancel" Text="Cancel">
+    </Cell>
   </Table>
 </Window>
 ```
 
-这就是当时XML的样子，跟今天的XML几乎是没什么区别的，只是很多功能都不存在。这个窗口画了一个2x2的表格，第一行整行放了个`<Label>`，右下角放了个`<Button>`，窗口变大的时候，按钮永远粘着右下角。窗口变小的时候，如果按钮挤到了那行字的空间，那么GacUI就会阻止你继续把窗口变小。而且表格的每一个元素之间的间隔，还有距离窗口边缘的间隔都保留在5个像素。在支持高DPI窗口之后，对5个像素的解读就是100%缩放下的5像素，改到了200%那就变成10个像素了。字体大小和几何图形的边缘也类似，所以GacUI的程序不管DPI改成什么样子，几乎都是没什么变化的。与GDI渲染器不同的是，Direct2D渲染器的效果并不模糊，因为Direct2D支持浮点尺寸，GDI不行。
+这就是当时XML的样子，跟今天的XML几乎是没什么区别的，只是很多功能都不存在。这个窗口画了一个两行三列的表格，第一行整行放了个`<Label>`，右下角放了个`<Button>`，窗口变大的时候，按钮永远粘着右下角。窗口变小的时候，如果按钮挤到了那行字的空间，那么GacUI就会阻止你继续把窗口变小。而且表格的每一个元素之间的间隔，还有距离窗口边缘的间隔都保留在5个像素。在支持高DPI窗口之后，对5个像素的解读就是100%缩放下的5像素，改到了200%那就变成10个像素了。字体大小和几何图形的边缘也类似，所以GacUI的程序不管DPI改成什么样子，几乎都是没什么变化的。与GDI渲染器不同的是，Direct2D渲染器的效果并不模糊，因为Direct2D支持浮点尺寸，GDI不行。
+
+这个设计跟localization还有关系，考虑到不同语言的OK和Cancel可能长度还不一样，这种使用`<Table>`的方法会让Cancel的文字变长之后自动把OK挤开。
 
 那如何响应按钮事件呢？在当时只能通过给按钮标记`ref.Name`，运行之后用这个名字从加载后的窗口中查询到这个对象，强制转换成`vl::presentation::controls::GuiButton`，最后再把事件挂上去。
 
 在折腾了好几个月之后，GacUI就第一次实现了从XML加载窗口。但是这种写法的缺点太多了，不仅反射带来exe体积的膨胀，而且UI的属性也只能是初始化的时候写死的，距离MVVM的目标那还是差远了。
 
 ## 2. 在XML中添加Workflow脚本的支持，实现数据绑定和事件处理
+
+加上数据绑定，性质就完全不同了。
 
 ## 3. 使用XML创建新的类型
 
