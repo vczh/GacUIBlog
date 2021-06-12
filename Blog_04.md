@@ -74,14 +74,46 @@ GacUI XML Resource大约在2013年左右开始成形，但是最终的功能是�
 
 事件处理被我规定为只能写一个语句，所以多个语句就需要使用大括号。而觉得一行写不下去也可以，`<ev.Clicked-eval>`可以单独变成一个tag，然后把代码用`<![CDATA[ ... ]]>`包起来就可以了。
 
-实现到这里，GacUI的加载变得非常慢。除了要根据XML的内容使用反射初始化窗口以外，还需要把XML的每一个表达式和事件回调都编译成单独的Workflow module，然后运行起来。体积大也是一个缺点，启动速度慢也是一个缺点，两个缺点加在一起，就可以让很多人打消使用GacUI的念头了。这当然是不行的。
+实现到这里，GacUI的加载变得非常慢。除了要根据XML的内容使用反射初始化窗口以外，还需要把XML的每一个表达式和事件回调都编译成单独的Workflow module，然后运行起来。exe体积大也是一个缺点，启动速度慢也是一个缺点，两个缺点加在一起，就可以让很多人打消使用GacUI的念头了。这当然是不行的。
 
 ## 3. 把整个XML编译成一个Workflow Assembly
 
+问题要一个一个解决。exe体积大只能不要反射，到了这一步还不可行。而启动速度慢的问题，则可以使用编译与启动分开来解决。而要这么做，那么在运行时一边读XML一边反射的方法就不可行了。那么怎么办呢？
+
+当时做出了一个决定，就是把整个GacUI XML Resource凡是非文件资源的部分都合并成一个单独的Workflow module。通俗一点也就是说，你写一个
+
+```XML
+<Window ref.Class="path::to::my::MainWindow">
+</Window>
+```
+
+那我也就不把XML拆开了，直接翻译成
+
+```Workflow
+module path_to_my_MainWindow;
+using presentation::control::*;
+
+namespace path
+{
+    namespace to
+    {
+        namespace my
+        {
+            class MainWindow : GuiWindow
+            {
+                ...
+            }
+        }
+    }
+}
+```
+
+然后Workflow module支持吧编译后的类型和指令都序列化成二进制，那么只要我把这个二进制放进资源里面，那你把编译后的GacUI XML Resource加载进来，反射出这个`path::to::my::MainWindow`的类然后调用它就可以了。至少这样把编译XML的时间拿掉了，启动速度大幅增加。
+
+但是这样又带来一个问题，那我想用C++给`buttonOK`挂事件怎么办？于是我给GacUI的一些类加上了一个叫做`GuiInstanceRootObject`的类型。这个类型现在还存在，只是功能跟当初完全不同了。主要的想法是这样的，当你创建一个UI资源的时候，你从`<Window>`开始时比较合理的，但是从`<Button>`这样的东西开始就有一点无稽之谈的感觉了。所以我规定了只有`Window`、`CustomControl`、`TabPage`和`XXXTemplate`（当时还不存在）等等这样的类型，才能作为XML的根节点。于是我就多了一个地方，可以把所有标注了`ref.Name`的对象都存进去。那么你仍然可以对着`MainWindow`查询一番`buttonOK`，然后强制转换成`GuiButton`，挂上事件。
+
 ## 4. 把Workflow编译成C++，大幅缩小exe体积
 
-## 5. 使用XML创建新的类型
-
-## 控件皮肤设计的演变
+## 5. 使用MVVM
 
 ## 尾声
