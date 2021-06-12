@@ -114,6 +114,20 @@ namespace path
 
 ## 4. 把Workflow编译成C++，大幅缩小exe体积
 
+于是到了这里，我终于可以做出摆脱反射的重要一步了。就算你不需要在你的应用程序里面编译XML，那还是要把编译后的脚本跑起来，就免不了反射。为了完全脱离反射，那么就连脚本都不能跑。唯一的方法就是把`Workflow`编译成C++了。今天的GacUI，把[这样的XML](https://github.com/vczh-libraries/Release/tree/master/Tutorial/GacUI_HelloWorlds/MVVM/UI)，翻译成了[这样的C++代码](https://github.com/vczh-libraries/Release/tree/master/Tutorial/GacUI_HelloWorlds/MVVM/UI/Source)。细心的读者可能会发现，编译出来的C++代码里仍然包含有注册反射的内容。不过我把它单独分离到一个文件里，就是为了让想用反射的人可以用反射，不想用反射直接当这几个文件不存在就好了。而GacUI源代码的设计，会让你打开`VCZH_DEBUG_NO_REFLECTION`的时候包含了反射的代码就有编译错误，而不打开`VCZH_DEBUG_NO_REFLECTION`的时候不包含反射代码也有编译错误，让你时刻知道自己的程序里到底有没有反射，而不会因为巧合而做出决定。
+
+具体Workflow怎么翻译成C++我就不在这里罗嗦了，Workflow也是一门只有智能指针而没有垃圾收集的语言，所以实际上只要翻译出来的语法和语义都对上就好了，没有什么特别困难的地方。在生成的代码里可能大家会发现我大量调用了`::vl::__vwsn::This`函数。Workflow的语义会让你调用`object.Method`的时候，如果`object`是`null`就当场抛异常，跟`C#`一样。而C++显然是没有这个功能的，所以我只好把这段逻辑放进`::vl::__vwsn::This`函数里。而生成的代码之所以这么长，是因为我在每一个地方都使用了包含所有namespace的全名，咋一看会比较乱。
+
+到了这里，`buttonOK`如何用C++挂事件的事情就得到了完美解决。只要你给`<Window>`写上了`ref.CodeBehind="true"`，然后`ev.Clicked`不要用`-eval`而是直接赋值一个函数名`="buttonOK_Clicked"`，那么GacUI就会单独为这个UI生成一对C++代码。在生成的代码里就有这样的内容：
+
+```C++
+void MainWindow::buttonOK_Clicked(::vl::presentation::compositions::GuiGraphicsComposition* sender, ::vl::presentation::compositions::GuiEventArgs* arguments)
+{/* USER_CONTENT_BEGIN(::demo::MainWindow) */
+}/* USER_CONTENT_END() */
+```
+
+在这两行里面的代码是不会被覆盖的，而修改了其他地方的代码则会被覆盖。体验就跟上个世代的经典UI库一样。
+
 ## 5. 使用MVVM
 
 ## 尾声
