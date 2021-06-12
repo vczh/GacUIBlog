@@ -122,7 +122,7 @@ namespace path
 
 ```C++
 void MainWindow::buttonOK_Clicked(::vl::presentation::compositions::GuiGraphicsComposition* sender, ::vl::presentation::compositions::GuiEventArgs* arguments)
-{/* USER_CONTENT_BEGIN(::demo::MainWindow) */
+{/* USER_CONTENT_BEGIN(::path::to::my::MainWindow) */
 }/* USER_CONTENT_END() */
 ```
 
