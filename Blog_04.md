@@ -144,3 +144,10 @@ GacUI允许的绑定多种多样，树形既可以是一个对象，也可以是
 不过由于缺乏`GacStudio`，想让非专业程序员来开发GacUI的UI目前难度还比较高，这是2.0要做的事情之一。
 
 ## 尾声
+
+由于时间久远，记忆都比较模糊了。为了写这个博客的系列，我又重新把以前的代码翻了出来。一开始GacUI只是作为编译器的一个side project出现，代码随便放。后来由于内容逐渐增多，我把它单独拿了出来放在了Codeplex。后来眼看Codeplex就要凉了，所以又把他同步到了Github上。后来发现同步还是有点麻烦，于是干脆挪到Github上开发。后来随着GacUI的内容越来越多，单独一个repo显得有点臃肿，于是干脆开了一个[vczh-libraries organization](https://github.com/vczh-libraries)。现在这个organization里面东西应有尽有，有做了一般的Linux移植`XGac`，有基本已经可以在macOS上跑起来的`iGac`，甚至文档网站`WebsiteSource`和用来index并生成GacUI文档页面的C++编译器前端`Document`都在里面。
+
+GacUI近两年进度比较缓慢，主要就是花了很多时间补充文档，还有开发这个C++编译器上了。现在已经可以在文档网站上阅读GacUI的很多资料了。一开始进目录[看文档](http://www.gaclib.net/doc/current/gacui/components/controls/basic/home.html)。不过文档毕竟不是源代码，具体到一个函数到底多少个参数分别是什么类型指针是裸指针还是智能指针这些细节，就可以在[生成的C++文档](http://www.gaclib.net/doc/current/gacui/ref/VL__PRESENTATION__CONTROLS__GUICONTROL.html)上看到。而如果这样还不满足的话，你甚至可以直接在网站上看到[GacUI的源代码](http://www.gaclib.net/CodeIndexDemo/Gaclib/SourceFiles/GuiBasicControls.h.html#NI$vl::presentation::controls::GuiControl)。这个源代码页面的开发呕心沥血，任何标识符都可以朔源，这还是归功于[花了两年写的C++编译器前端](https://github.com/vczh-libraries/Document)。如果这样还觉得有点难懂，还有[大量的例子](https://github.com/vczh-libraries/Release/tree/master/Tutorial)等你来看。
+
+19年之前是基本没有文档的，而又不少人只通过阅读这些例子就基本掌握了GacUI的使用方法。而且GacUI的设计并没有多浓厚的C++味道，反而有利于很多熟悉其它语言的程序员来使用。甚至还有[macOS的移植](https://github.com/vczh-libraries/iGac)就是两个网友在完全没有文档的前提下，甚至不需要问我多少问题，就把他做出来了。这让我感觉这么多年学习编程并不是浪费的，自己做出来的设计切切实实地做到了程序员友好，也是对我多年来努力的肯定。
+
