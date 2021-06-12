@@ -28,11 +28,11 @@ GacUI XML Resource大约在2013年左右开始成形，但是最终的功能是�
     </Cell>
 
     <Cell Site="row:1 column:1">
-      <Button ref.Name="buttonOK" Text="OK">
+      <Button ref.Name="buttonOK" Text="OK"/>
     </Cell>
 
     <Cell Site="row:1 column:2">
-      <Button ref.Name="buttonCancel" Text="Cancel">
+      <Button ref.Name="buttonCancel" Text="Cancel"/>
     </Cell>
   </Table>
 </Window>
@@ -48,13 +48,39 @@ GacUI XML Resource大约在2013年左右开始成形，但是最终的功能是�
 
 ## 2. 在XML中添加Workflow脚本的支持，实现数据绑定和事件处理
 
-加上数据绑定，性质就完全不同了。
+加上数据绑定，性质就完全不同了。这也是[Workflow脚本语言](https://github.com/vczh-libraries/Workflow)的来源。虽然Workflow必须写完一个模块才可以编译，但是如果在XML里面支持表达式，那只要把没一个表达式都改写成一个函数，多少个表达式就出来多少个模块，那也是可以运行起来了。虽然数据绑定实现起来有点绕，但是总的来说只要注册反射的时候，把属性和事件捆绑在一起就好了。`VlppReflection`提供了这一功能。
 
-## 3. 使用XML创建新的类型
+数据绑定在XML的语法也很直接。一个属性的赋值可以是`Attribute="Value"`，但是只要加上不同的binder，就可以对值产生不同的解读。譬如说可以在菜单的列表项里面引用同一个XML或者别的XML带的图片文件：`Image-uri="res://Path/To/The/Image.png"`。最简单的数据绑定就是一个Workflow计算出来的一次性答案：`Text-eval="let today = Sys::GetLocalTime() in ($'$(today.year)年$(today.month)月$(today.day)日')"`。当然了，GacUI提供了localization的API可以用，显示年月日不需要真的这么麻烦。如果使用`-bind`，那么GacUI就会知道，你是想实时跟踪这个表达式。
 
-## 4. 把整个XML编译成一个Workflow Assembly
+你可以做一个程序，两个文本框输入数字，第三个文本框显示结果。而你只需要这样写：
 
-## 5. 把Workflow编译成C++，大幅缩小exe体积
+```XML
+<SinglelineTextBox Readonly="true" ref.Name="textBox3" Text-bind="(cast int textBox1.Text) + (cast int textBox2.Text) ?? '请输入整数'">
+```
+
+那么只要两个标记为`ref.Name="textBox1"`和`ref.Name="textBox2"`的文本框内容一改，那这个文本框的内容就会跟着改为他们俩的和。如果输入的内容不是数字，那么`cast`表达式会抛异常，然后被`??`操作符接住，显示`请输入数字`。非常智能。不过真的要严格使用MVVM的话，其实抽象的更多一点，把ViewModel的两个属性绑定到文本框上，然后第三个文本框从ViewModel的属性绑定回来，`请输入整数`这个数字还要放在`<LocalizedStrings>`里面支持多国语言的翻译，等等。
+
+在处理这个表达式的时候，因为文本框的`GetText`函数、`SetText`函数和`TextChanged`事件被捆绑到了一起，那么GacUI自然就知道实时跟踪这个表达式需要给两个`TextChanged`都挂上回调函数。在文本框的内容被用户输入的同时，事件会被触发，然后不管调用的是拿一个回调函数，这行代码都会重新运行一遍然后调用`textBox3->SetText`。具体实现的时候由于表达式可以很复杂，所以细节上要比这里说的麻烦很多，具体可以参考[考不上三本也会实现数据绑定（一）](https://zhuanlan.zhihu.com/p/26855349)、[（二）](https://zhuanlan.zhihu.com/p/27111228)、[（三）](https://zhuanlan.zhihu.com/p/63909344)。
+
+而在XML添加回调函数的道理也是差不多的。譬如说上一段的例子里，`buttonOK`点一下就把自己关掉，就可以写成：
+
+```XML
+<Window ref.Name="self" ...>
+  ...
+  <Button ref.Name="buttonOK" Text="OK" ev.Clicked-eval="self.Close();"/>
+  ...
+</Window>
+```
+
+事件处理被我规定为只能写一个语句，所以多个语句就需要使用大括号。而觉得一行写不下去也可以，`<ev.Clicked-eval>`可以单独变成一个tag，然后把代码用`<![CDATA[ ... ]]>`包起来就可以了。
+
+实现到这里，GacUI的加载变得非常慢。除了要根据XML的内容使用反射初始化窗口以外，还需要把XML的每一个表达式和事件回调都编译成单独的Workflow module，然后运行起来。体积大也是一个缺点，启动速度慢也是一个缺点，两个缺点加在一起，就可以让很多人打消使用GacUI的念头了。这当然是不行的。
+
+## 3. 把整个XML编译成一个Workflow Assembly
+
+## 4. 把Workflow编译成C++，大幅缩小exe体积
+
+## 5. 使用XML创建新的类型
 
 ## 控件皮肤设计的演变
 
